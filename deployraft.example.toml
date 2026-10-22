@@ -1,0 +1,22 @@
+[servers.production]
+host = "example.com"
+port = 22
+user = "deploy"
+auth = "password"
+
+[servers.staging]
+host = "staging.example.com"
+user = "deploy"
+auth = "key"
+# identity_file = "/home/you/.ssh/id_ed25519"
+
+[apps.website]
+server = "production"
+directory = "/srv/website"
+command = "git pull --ff-only"
+# at = "2030-01-15 22:30"
+
+[apps.preview]
+server = "staging"
+directory = "/srv/preview"
+command = "git pull --ff-only"

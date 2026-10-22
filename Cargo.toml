@@ -1,0 +1,17 @@
+[package]
+name = "deployraft"
+version = "0.1.0"
+edition = "2024"
+description = "SSH deployments"
+authors = ["Synframe Labs"]
+license = "Apache-2.0"
+homepage = "https://synframe.eu"
+repository = "https://github.com/Synframe-Labs/deployraft"
+readme = "README.md"
+keywords = ["deploy", "ssh", "cli", "automation"]
+categories = ["command-line-utilities"]
+include = ["src/**", "Cargo.lock", "README.md", "LICENSE", "deployraft.example.toml"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
