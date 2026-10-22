@@ -14,7 +14,7 @@ auth = "key"
 server = "production"
 directory = "/srv/website"
 command = "git pull --ff-only"
-# at = "2030-01-15 22:30"
+# at = "22:30"
 
 [apps.preview]
 server = "staging"

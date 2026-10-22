@@ -169,7 +169,10 @@ fn run() -> Result<(), Box<dyn Error>> {
     }
 
     if let Some(at) = &app.at {
-        writeln!(output, "Schedule: {at} (server timezone)")?;
+        writeln!(
+            output,
+            "Schedule: {at} (server timezone, next day if already passed)"
+        )?;
         writeln!(
             output,
             "WARNING: scheduled commands need server-side credentials. Forwarded SSH agents are unavailable after disconnecting."
@@ -249,16 +252,19 @@ fn validate(server: &Server, app: &App) -> Result<(), String> {
     }
 
     if let Some(at) = &app.at {
-        let valid = at.len() == 16
+        let valid = at.len() == 5
             && at.bytes().enumerate().all(|(i, byte)| match i {
-                4 | 7 => byte == b'-',
-                10 => byte == b' ',
-                13 => byte == b':',
+                2 => byte == b':',
                 _ => byte.is_ascii_digit(),
-            });
+            })
+            && at[..2].parse::<u8>().is_ok_and(|hour| hour < 24)
+            && at[3..].parse::<u8>().is_ok_and(|minute| minute < 60);
 
         if !valid {
-            return Err("at must use YYYY-MM-DD HH:MM in the server timezone".into());
+            return Err(
+                "at must use HH:MM (00:00-23:59) in the server timezone. Dates are not supported"
+                    .into(),
+            );
         }
     }
 
@@ -280,27 +286,13 @@ fn remote_script(app: &App) -> String {
         return deployment;
     };
 
-    let timestamp: String = at.chars().filter(char::is_ascii_digit).collect();
-
     format!(
         r#"set -eu
 printf '%s\n' 'Checking scheduler and deployment directory...'
 command -v at >/dev/null || {{ printf '%s\n' 'at is not installed on the server'; exit 1; }}
 (cd -- {directory}) || exit 1
-requested={requested}
-normalized=$(LC_ALL=C date -d "$requested" '+%Y-%m-%d %H:%M') || exit 1
-if [ "$normalized" != "$requested" ]; then
-    printf '%s\n' 'Invalid or normalized schedule date'
-    exit 1
-fi
-scheduled=$(LC_ALL=C date -d "$requested" '+%s') || exit 1
-now=$(date '+%s') || exit 1
-if [ "$((scheduled - now))" -lt 60 ]; then
-    printf '%s\n' 'Schedule must be at least 60 seconds ahead of the server clock'
-    exit 1
-fi
-printf 'Submitting job for %s (%s)\n' "$requested" "$(date -d "$requested" '+%Z %z')"
-printf '%s\n' {deployment} | at -t {timestamp}
+printf 'Submitting job for %s (server timezone, next day if already passed)\n' {requested}
+printf '%s\n' {deployment} | at -v {requested}
 "#,
         requested = shell_quote(at),
         deployment = shell_quote(&deployment),

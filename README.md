@@ -10,7 +10,7 @@ With Rust and Cargo installed:
 cargo install deployraft
 ```
 
-Ensure `~/.cargo/bin` is on your `PATH`. Deployraft runs on Linux and macOS and requires local OpenSSH (`ssh`). Remote servers need Linux and `/bin/sh`. Scheduling also requires GNU `date`, `at`, a running `atd` service, and permission to submit jobs.
+Ensure `~/.cargo/bin` is on your `PATH`. Deployraft runs on Linux and macOS and requires local OpenSSH (`ssh`). Remote servers need Linux and `/bin/sh`. Scheduling also requires `at`, a running `atd` service, and permission to submit jobs.
 
 ### Manual installation
 
@@ -37,7 +37,7 @@ auth = "password"
 server = "production"
 directory = "/srv/website"
 command = "git pull --ff-only"
-# at = "2030-01-15 22:30"
+# at = "22:30"
 ```
 
 Add more named entries under `servers` and `apps`. Applications reference a server by name and each contain one command. Port defaults to `22`. Other fields shown above are required, except `at`.
@@ -72,9 +72,11 @@ If SSH disconnects without confirming the result, the remote operation may alrea
 
 ## Scheduling
 
-Set `at = "YYYY-MM-DD HH:MM"` on an application to submit its command to the server's queue instead of executing immediately. The date uses the **server's timezone and clock**, including its daylight saving rules. Avoid ambiguous times during clock changes.
+Set `at = "22:30"` on an application to submit its command to the server's queue instead of executing immediately. Only the 24-hour format `HH:MM` is accepted, from `00:00` to `23:59`. Values containing a date are rejected.
 
-Deployraft checks the directory, scheduler, calendar date, and future deadline before submitting. The deadline must be at least 60 seconds ahead of the server clock at validation. This margin reduces timing races, though clock changes or long process pauses can still affect submission. The server's response is printed and successful submission ends with `SCHEDULED` and exit status zero.
+The time uses the **server's timezone and clock**. The server's `at` schedules the job for today, or the next day if that time has already passed when the submission is processed. The job runs once. Minute-boundary and daylight saving behavior follow the server's `at` implementation.
+
+Deployraft validates the time and checks the directory and scheduler before submitting. There is no minimum lead time. The server's `at -v` response shows the selected execution date and job confirmation. Check that date, especially near the requested time or during clock changes. Successful submission ends with `SCHEDULED` and exit status zero.
 
 Scheduled commands need credentials available on the server when they run. A forwarded SSH agent stops being available after the deployment connection closes. For example, a scheduled Git command may need a server-side deploy key.
 
